@@ -1,4 +1,4 @@
-from logic_utils import check_guess
+from logic_utils import check_guess, parse_guess
 
 def test_winning_guess():
     # If the secret is 50 and guess is 50, it should be a win
@@ -38,3 +38,40 @@ def test_too_low_message_says_go_higher():
     assert outcome == "Too Low"
     assert "HIGHER" in message
     assert "LOWER" not in message
+
+
+# --- Regression tests for the out-of-range input bug ---
+# The bug: parse_guess accepted any integer, so guesses like -500 or 99999
+# were accepted even though the UI promised a fixed range. These tests pin
+# parse_guess to reject values outside the given range.
+
+def test_guess_within_range_is_accepted():
+    ok, value, err = parse_guess("50", 1, 100)
+    assert ok is True
+    assert value == 50
+    assert err is None
+
+
+def test_guess_below_range_is_rejected():
+    ok, value, err = parse_guess("-500", 1, 100)
+    assert ok is False
+    assert value is None
+    assert "between 1 and 100" in err
+
+
+def test_guess_above_range_is_rejected():
+    ok, value, err = parse_guess("99999", 1, 100)
+    assert ok is False
+    assert value is None
+    assert "between 1 and 100" in err
+
+
+def test_range_boundaries_are_inclusive():
+    assert parse_guess("1", 1, 100)[0] is True
+    assert parse_guess("100", 1, 100)[0] is True
+
+
+def test_non_number_still_rejected_with_range():
+    ok, value, err = parse_guess("abc", 1, 100)
+    assert ok is False
+    assert err == "That is not a number."
